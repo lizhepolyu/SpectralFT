@@ -14,33 +14,33 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="ECAPA Trainer")
 
     # Training Settings
-    parser.add_argument('--num_frames', type=int, default=200,
+    parser.add_argument('--num_frames', type=int, default=300,
                         help='Duration of the input segments, e.g., 200 for 2 seconds')
     parser.add_argument('--max_epoch', type=int, default=30,
                         help='Maximum number of epochs')
-    parser.add_argument('--batch_size', type=int, default=64,
+    parser.add_argument('--batch_size', type=int, default=128,
                         help='Batch size')
     parser.add_argument('--n_cpu', type=int, default=32,
                         help='Number of loader threads')
     parser.add_argument('--test_step', type=int, default=1,
                         help='Test and save every [test_step] epochs')
-    parser.add_argument('--lr', type=float, default=0.01,
+    parser.add_argument('--lr', type=float, default=0.001,
                         help='Learning rate')
     parser.add_argument('--lr_decay', type=float, default=0.97,
                         help='Learning rate decay every [test_step] epochs')
 
     # Paths and Lists
-    parser.add_argument('--train_list', type=str, default="/home8a/lizhe/voxceleb1/meta-data/train_list.txt",
+    parser.add_argument('--train_list', type=str, default="train_list.txt",
                         help='Path to the training list')
-    parser.add_argument('--train_path', type=str, default="/home8a/lizhe/voxceleb1/dev",
+    parser.add_argument('--train_path', type=str, default="voxceleb1/dev",
                         help='Path to the training data')
-    parser.add_argument('--eval_list', type=str, default="/home8a/lizhe/voxceleb1/voxceleb1_test_v2.txt",
+    parser.add_argument('--eval_list', type=str, default="voxceleb1/voxceleb1_test_v2.txt",
                         help='Path to the evaluation list')
-    parser.add_argument('--eval_path', type=str, default="/home8a/lizhe/voxceleb1/test/",
+    parser.add_argument('--eval_path', type=str, default="voxceleb1/test/",
                         help='Path to the evaluation data')
-    parser.add_argument('--musan_path', type=str, default="/home8a/lizhe/musan/",
+    parser.add_argument('--musan_path', type=str, default="musan/",
                         help='Path to the MUSAN dataset')
-    parser.add_argument('--rir_path', type=str, default="/home8a/lizhe/RIRS_NOISES/simulated_rirs/",
+    parser.add_argument('--rir_path', type=str, default="RIRS_NOISES/simulated_rirs/",
                         help='Path to the RIR dataset')
     parser.add_argument('--save_path', type=str, default="exps/vox1",
                         help='Path to save scores and models')
@@ -50,9 +50,9 @@ def parse_arguments():
     # Model and Loss Settings
     parser.add_argument('--C', type=int, default=1024,
                         help='Channel size for the speaker encoder')
-    parser.add_argument('--m', type=float, default=0.2,
+    parser.add_argument('--m', type=float, default=0.3,
                         help='Loss margin in AAM softmax')
-    parser.add_argument('--s', type=float, default=30,
+    parser.add_argument('--s', type=float, default=32,
                         help='Loss scale in AAM softmax')
     parser.add_argument('--n_class', type=int, default=1211,
                         help='Number of speakers')
