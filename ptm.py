@@ -161,10 +161,8 @@ class WavLMPtm(nn.Module):
             q_adapter_weight = self.spectral_adapters_q[q_key]()
             k_adapter_weight = self.spectral_adapters_k[k_key]()
 
-            # Copy the adapted weights back into the model (no gradient to original weights)
-            with torch.no_grad():
-                model.encoder.layers[i].attention.q_proj.weight.copy_(q_adapter_weight)
-                model.encoder.layers[i].attention.k_proj.weight.copy_(k_adapter_weight)
+            model.encoder.layers[i].attention.q_proj.weight = nn.Parameter(q_adapter_weight)
+            model.encoder.layers[i].attention.k_proj.weight = nn.Parameter(k_adapter_weight)
 
         # (Optional) layer normalization on the input audio
         audio = F.layer_norm(audio, audio.shape)
