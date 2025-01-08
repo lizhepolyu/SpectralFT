@@ -5,18 +5,17 @@ Previous research has shown that the principal singular vectors of a pre-trained
 <img src="SpectralFT.png" alt="Spectral Fine Tuning" style="width: 50%;"/>
 
 $$
-\begin{aligned}
-\text{SpectralFT}(\bm{W}) :&= [\bm{U}_p + \bm{\Delta}_U] \bm{\Sigma}_p [\bm{V}_p + \bm{\Delta}_V]^\textsf{T},
-\end{aligned}
-\label{eq:SpectralFT}
+\text{SpectralFT}(\mathbf{W}) := [\mathbf{U}_p + \mathbf{\Delta}_U] \boldsymbol{\Sigma}_p [\mathbf{V}_p + \mathbf{\Delta}_V]^\textsf{T},
 $$
 
-
 # Citation
+
+```bibtex
 @inproceedings{Li2025SpectralAware,
   author    = {Zhe Li and Man-wai Mak and Mert Pilanci and Hung-yi Lee and Helen Meng},
   title     = {Spectral-Aware Low-Rank Adaptation for Speaker Verification},
   booktitle = {Proc. of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
   year      = {2025}
 }
+
 
