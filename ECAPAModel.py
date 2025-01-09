@@ -23,6 +23,7 @@ import numpy as np
 import soundfile
 import tqdm
 from scipy import signal
+from itertools import chain
 
 # -----------------------------
 # 3. Local Imports
@@ -67,22 +68,35 @@ class ECAPAModel(nn.Module):
         # 3. Define Optimizer/Scheduler
         # -----------------------------
         # Using Adam optimizer and CosineAnnealingWarmRestarts as an example.
-        self.optim = torch.optim.Adam(self.parameters(), lr=lr, weight_decay=2e-5)
-        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            self.optim, T_0=40, T_mult=2, eta_min=1e-7
-        )
+        # self.optim = torch.optim.Adam(self.parameters(), lr=lr, weight_decay=2e-5)
+        # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(self.optim, T_0=40, T_mult=2, eta_min=1e-7)
 
         # Alternative (commented out) for reference:
-        # self.optim = torch.optim.SGD(self.parameters(), lr=lr, momentum=0.9, weight_decay=1.0e-4)
-        # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size=test_step, gamma=lr_decay)
+        self.optim = torch.optim.SGD(self.parameters(), lr=lr, momentum=0.9, weight_decay=1.0e-4)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size=test_step, gamma=lr_decay)
 
         # Print the total number of model parameters (in MB)
-        model_params = sum(param.numel() for param in self.speaker_encoder.parameters())
+        model_params = sum(
+        param.numel() 
+        for param in self.speaker_encoder.parameters() 
+        if param.requires_grad
+        )
         current_time = time.strftime("%m-%d %H:%M:%S")
         print(f"{current_time} Model parameter count = {model_params / 1024 / 1024:.2f} MB")
-        wavlm_trainable_params = sum(p.numel() for p in self.speaker_encoder.WavLMPtm.parameters() if p.requires_grad)
-        print(f"Number of trainable parameters in WavLMPtm: {wavlm_trainable_params / 1e6:.2f} M")
-           
+        
+        # 假设 wavlm_ptm 是已经初始化好的 WavLMPtm 实例
+        adapters = chain(self.speaker_encoder.WavLMPtm.spectral_adapters_q.values(),
+                        self.speaker_encoder.WavLMPtm.spectral_adapters_k.values())
+                        
+        spectral_adapter_params = sum(
+            p.numel()
+            for adapter in adapters          # adapter 是一个 SpectralAdapter 实例
+            for p in adapter.parameters()    # p 是 adapter 内部真正的可训练张量
+            if p.requires_grad
+        )
+
+        print(f"Trainable params in SpectralAdapters: {spectral_adapter_params / 1e6:.2f} M")
+    
     def train_network(self, epoch, loader):
         """
         Perform one epoch of training.
@@ -134,7 +148,7 @@ class ECAPAModel(nn.Module):
             # Optional logging
             total_steps = len(loader)
             if batch_idx % 10 == 0 or batch_idx == total_steps:
-                accuracy = (total_correct / total_samples) * 100.0
+                accuracy = total_correct / total_samples* len(labels)
                 avg_loss = total_loss / batch_idx
                 progress = 100.0 * batch_idx / total_steps
                 current_time = time.strftime("%m-%d %H:%M:%S")
@@ -150,11 +164,11 @@ class ECAPAModel(nn.Module):
 
         # Return epoch metrics
         average_loss = total_loss / batch_idx
-        accuracy = (total_correct / total_samples) * 100.0
+        accuracy =  total_correct / total_samples*len(labels)
         return average_loss, current_lr, accuracy
 
 
-    def eval_network(self, eval_list, eval_path):
+    def eval_network(self, eval_list_path, eval_data_path):
         """
         Evaluate the model for speaker verification. Embeddings are extracted for each audio file,
         then verification scores are computed on pairs.
@@ -172,7 +186,7 @@ class ECAPAModel(nn.Module):
         # Step 1. Collect all unique filenames from the eval list.
         files = []
         embeddings = {}
-        lines = open(eval_list).read().splitlines()
+        lines = open(eval_list_path).read().splitlines()
         for line in lines:
             files.append(line.split()[1])
             files.append(line.split()[2])
@@ -180,24 +194,32 @@ class ECAPAModel(nn.Module):
 
         # Step 2. Compute embeddings for each audio file.
         for idx, file in tqdm.tqdm(enumerate(setfiles), total=len(setfiles)):
-            audio_path = os.path.join(eval_path, file)
-            audio, _ = soundfile.read(audio_path)
+            audio_path = os.path.join(eval_data_path, file)
+            audio, sr = soundfile.read(audio_path)
+            
+            # If the audio length is greater than 60 seconds, truncate to the first 60 seconds
+            max_duration_sec = 60
+            max_samples = int(sr * max_duration_sec)
+            if len(audio) > max_samples:
+                audio = audio[:max_samples]
 
             # Convert to FloatTensor for single-pass embedding
             data_1 = torch.FloatTensor(np.stack([audio], axis=0)).cuda()
 
             # Handle split utterance approach for robust embedding
-            max_audio = 300 * 160 + 240  # example: 300 frames, each 160 samples, plus 240 padding
-            if len(audio) <= max_audio:
-                shortage = max_audio - len(audio)
+
+            min_duration_sec = 3
+            min_samples = int(sr * min_duration_sec)
+            if len(audio) <= min_samples:
+                shortage = min_samples - len(audio)
                 audio = np.pad(audio, (0, shortage), mode='wrap')
 
             # Split the audio into chunks
             feats = []
-            start_frames = np.linspace(0, len(audio) - max_audio, num=5)
+            start_frames = np.linspace(0, len(audio) - min_samples, num=5)
             for start in start_frames:
                 start = int(start)
-                feats.append(audio[start:start + max_audio])
+                feats.append(audio[start:start + min_samples])
             feats = np.stack(feats, axis=0).astype(float)
 
             data_2 = torch.FloatTensor(feats).cuda()
