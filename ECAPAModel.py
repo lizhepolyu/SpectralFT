@@ -84,7 +84,7 @@ class ECAPAModel(nn.Module):
         current_time = time.strftime("%m-%d %H:%M:%S")
         print(f"{current_time} Model parameter count = {model_params / 1024 / 1024:.2f} MB")
         
-        # 假设 wavlm_ptm 是已经初始化好的 WavLMPtm 实例
+        # Assuming `wavlm_ptm` is an already initialized instance of the `WavLMPtm` class.
         adapters = chain(self.speaker_encoder.WavLMPtm.spectral_adapters_q.values(),
                         self.speaker_encoder.WavLMPtm.spectral_adapters_k.values())
                         
@@ -148,7 +148,7 @@ class ECAPAModel(nn.Module):
             # Optional logging
             total_steps = len(loader)
             if batch_idx % 10 == 0 or batch_idx == total_steps:
-                accuracy = total_correct / total_samples* len(labels)
+                accuracy = total_correct / total_samples*len(labels)
                 avg_loss = total_loss / batch_idx
                 progress = 100.0 * batch_idx / total_steps
                 current_time = time.strftime("%m-%d %H:%M:%S")
